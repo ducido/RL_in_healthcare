@@ -1,6 +1,6 @@
 import numpy as np
 import time
-import gym
+# import gym
 import matplotlib.pyplot as plt
 import tensorflow as tf
 from tensorflow import keras
@@ -9,9 +9,8 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas
-import cv2
-from tqdm.notebook import tqdm
-from IPython.display import clear_output
+# from tqdm.notebook import tqdm
+# from IPython.display import clear_output
 from collections import deque
 
 
@@ -49,9 +48,9 @@ class Critic():
 
     def build_critic(self, name):
         state_input = keras.layers.Input(
-            shape=self.observation_space, name='state_input')
+            shape=(self.observation_space, ), name='state_input')
         action_input = keras.layers.Input(
-            shape=self.action, name='action_input')
+            shape=(self.action, ), name='action_input')
 
         concat = keras.layers.Concatenate()([state_input, action_input])
 
@@ -89,7 +88,7 @@ class Agent():
         action = self.actor.model(observation)
         if np.random.rand() < e:
             return np.clip(action + np.random.normal(0, 0.1, action.shape), -1, 1)
-        return action
+        return action.numpy()
 
     def remember(self, s, a, s_, r):
         self.buffer.append([s, a, s_, r])
@@ -110,7 +109,7 @@ class Agent():
 
         # Train critic
         a_ = self.actor.target_model(s_)
-        next_q = self.critic.target_model([s_, a_])
+        next_q = self.critic.target_model([s_, a_.numpy()])
         target_q = r + self.gamma*next_q
 
         with tf.GradientTape() as tape:
