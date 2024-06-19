@@ -24,7 +24,5 @@ numpy
 
 ## Disclaimer
 This repo does not focus on the results, just implemetation
-
-
-
+-----------------------------------------------------------
 *Big thanks to TonManhKien for beautiful code*
