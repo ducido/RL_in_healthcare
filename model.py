@@ -9,8 +9,9 @@ import os
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas
+# import cv2
 # from tqdm.notebook import tqdm
-# from IPython.display import clear_output
+from IPython.display import clear_output
 from collections import deque
 
 
@@ -48,15 +49,15 @@ class Critic():
 
     def build_critic(self, name):
         state_input = keras.layers.Input(
-            shape=(self.observation_space, ), name='state_input')
+            shape=self.observation_space, name='state_input')
         action_input = keras.layers.Input(
-            shape=(self.action, ), name='action_input')
+            shape=self.action, name='action_input')
 
         concat = keras.layers.Concatenate()([state_input, action_input])
 
         hidden1 = keras.layers.Dense(128, activation='relu')(concat)
         hidden2 = keras.layers.Dense(128, activation='relu')(hidden1)
-        output = keras.layers.Dense(1, activation='linear')(hidden2)
+        output = keras.layers.Dense(self.action_space, activation='linear')(hidden2)
 
         model = keras.Model(
             inputs=[state_input, action_input], outputs=output, name=name)
@@ -88,7 +89,7 @@ class Agent():
         action = self.actor.model(observation)
         if np.random.rand() < e:
             return np.clip(action + np.random.normal(0, 0.1, action.shape), -1, 1)
-        return action.numpy()
+        return action
 
     def remember(self, s, a, s_, r):
         self.buffer.append([s, a, s_, r])
@@ -105,11 +106,12 @@ class Agent():
     def train(self, data):
         # if len(self.buffer) < batch_size:
         #     return
+        
         s, a, s_, r = data
 
         # Train critic
         a_ = self.actor.target_model(s_)
-        next_q = self.critic.target_model([s_, a_.numpy()])
+        next_q = self.critic.target_model([s_, a_])
         target_q = r + self.gamma*next_q
 
         with tf.GradientTape() as tape:
@@ -118,7 +120,7 @@ class Agent():
 
         critic_grad = tape.gradient(
             critic_loss, self.critic.model.trainable_variables)
-        
+
         # print("Critic Gradients:", critic_grad)
 
         self.critic.model.optimizer.apply_gradients(
@@ -126,14 +128,12 @@ class Agent():
 
         # Train actor
         with tf.GradientTape() as tape:
-            tape.watch(self.actor.model.trainable_variables)
             actions = self.actor.model(s, training=True)
             q_values = self.critic.model([s, actions], training=False) 
             actor_loss = -tf.reduce_mean(q_values)
 
         actor_grad = tape.gradient(
             actor_loss, self.actor.model.trainable_variables)
-
 
         self.actor.model.optimizer.apply_gradients(
             zip(actor_grad, self.actor.model.trainable_variables))
